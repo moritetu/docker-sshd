@@ -2,6 +2,7 @@ NAME   ?= centos7-sshd
 TAG    ?= latest
 IMAGE  ?= $(NAME):$(TAG)
 PORT   ?= 10022
+HOST   ?= localhost
 
 all: build
 
@@ -10,7 +11,7 @@ build:
 
 run: build
 	docker run -d -p $(PORT):22 --name $(NAME) $(IMAGE)
-	@echo "ssh login: ssh -p $(PORT) root@localhost"
+	@echo "ssh login: ssh -p $(PORT) root@$(HOST)"
 
 start:
 	docker container start $(NAME)
@@ -18,8 +19,12 @@ start:
 stop:
 	docker container stop $(NAME)
 
+login:
+	$(eval _PORT := $(shell docker inspect $(NAME) -f '{{(index (index .NetworkSettings.Ports "22/tcp") 0).HostPort }}'))
+	ssh -p $(_PORT) root@$(HOST)
+
 update-key:
-	ssh-keygen -R "[localhost]:$(PORT)"
+	ssh-keygen -R "[$(HOST)]:$(PORT)"
 
 clean: stop
 	docker container rm -f $(NAME)
@@ -32,6 +37,7 @@ help:
 	@echo "run          Run container."
 	@echo "start        Start container."
 	@echo "stop         Stop container."
+	@echo "login        Login container."
 	@echo "update-key   Updating host keys."
 	@echo "clean        Stop container and remove image."
 	@echo ""
